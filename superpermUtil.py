@@ -25,13 +25,19 @@ def genEdges(N):
     edges = []
     strings = []
     identity = tuple(range(N))
-    for ii in range(1,N+1):
+    maxEdgeCost = 3#N
+    maxEdges = 3
+    for ii in range(1,maxEdgeCost+1):
         for p in permutations(range(0,ii)):
             p = p[::-1]
             # If the start of the perm doesn't match an existing string
             if all([p[0:len(x)] != x for x in strings]):
                 strings.append(p)
                 edges.append(permPosGen(identity,tuple(range(ii,N))+p))
+                if len(edges) == maxEdges:
+                    break
+        if len(edges) == maxEdges:
+            break
     comb = zip(edges,strings,tuple(len(x) for x in strings))
     comb = zip(*sorted(comb, key = lambda el : (-len(el[1]),)+el[1], reverse = True ))
     return comb
@@ -102,6 +108,7 @@ class Method:
 
     def parse(self, superperm):
         """superperm - tuple of self.stage distinct objects"""
+        superperm = tuple(superperm)
         stage = self.stage
         
         perm = superperm[0:stage]
