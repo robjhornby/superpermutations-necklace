@@ -1,0 +1,41 @@
+# Unwanted extensions
+*.asv
+*.sur
+*.dll
+*.exe
+*.app
+# Database
+*.db
+*.rdb
+__pycache__
+*.pyc
+.spyproject
+*.DS_Store
+# Distribution / packaging
+env/
+build/
+dist/
+downloads/
+lib/
+
+# DotEnv configuration
+.env
+
+# TeX/LaTeX
+*.aux
+*.bbl
+*.blg
+*.synctex.gz
+*.xwm
+
+# IPython NB Checkpoints
+.ipynb_checkpoints/
+
+# exclude compiled binaries
+bin/
+
+# exclude data from source control by default
+/data/external
+/data/interim
+/data/processed
+/data/raw
