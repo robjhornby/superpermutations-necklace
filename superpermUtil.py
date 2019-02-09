@@ -74,11 +74,11 @@ def rotate(l, n):
 debi = 0
 def debprint(text = ''):
     pass
-    global debi
+    """global debi
     print(text)
     debi += 1
     if debi%10 == 0:
-        input()
+        input()"""
 
 class Method:
     #notation: list of strings of place notation for each row
@@ -189,8 +189,11 @@ class TouchStore:
         self.length = position+1
         debprint('setLastEdge ----')
         debprint(len(self.path))
+        debprint(len(self.pathcost))
         debprint(position)
         self.path[position] = edgei
+        debprint(self.pathcost[position])
+        debprint(self.method.edgecost[edgei])
         self.pathcost[position] = self.method.edgecost[edgei]
         
         self.node = self.method.nextNode(self.visited[position], edgei)
@@ -203,7 +206,6 @@ class TouchStore:
         
         # This assumes the touch has been built up from true substrings!
         if self.length == self.method.numNodes:
-            print('Full length')
             return 0            
                     
         for fs in self.visited[:position+1]:

@@ -19,7 +19,7 @@ import time
 
 solutions = []
 solnIters = []
-stage = 4 # Number of objects
+stage = 5 # Number of objects
 
 method = Method(stage)
 k = len(method.edges) # Number of edges/size of dictionary for necklace search
@@ -35,8 +35,8 @@ stop = False
 
 it = 0
 falses = 0
-tmp = (0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,0)
-a = tmp
+#tmp = [0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 4, 2, 1, 2, 1, 1, 0,0 ]
+#a = tmp
 touch = TouchStore(method, list(a))
 abort = False
 
@@ -54,19 +54,21 @@ def divisors(n):
     return div
 
 def pruneCondition(touch, pos,minCost):
+    global pruned
     if touch.projectedCost(pos) > minCost:
-        print('Prune for cost')
+        pruned += 1
         return True
     if not touch.isTrue():
+        pruned += 1
         return True
     return False
 
-
+itstatus = 100000
 def necklaceSearch(touch):
-    global it, minCost
+    global it, minCost, itstatus
     n = touch.method.numNodes
-    k = len(touch.method.edges)
-    print('Starting necklace search n={}, k={}'.format(n,k))
+    k = len(touch.method.edges)-1
+    print('Starting necklace search on {} objects, n={}, k={}'.format(touch.method.stage,n,k))
     
     divs = divisors(n)
     while touch.path != [k]*n:
@@ -84,7 +86,7 @@ def necklaceSearch(touch):
             if el < k:
                 touch.setLastEdge(pos, el + 1)
                 it += 1
-                if it%10000 == 0:
+                if it%itstatus == 0:
                     PrintStatus(touch,pos)
                     
                 debprint(touch.getPath())
@@ -108,7 +110,7 @@ def necklaceSearch(touch):
                     
                     touch.setLastEdge(pos+i+1, touch.path[i])
                     it += 1
-                    if it%10000 == 0:
+                    if it%itstatus == 0:
                         PrintStatus(touch,pos)
             
                     debprint(touch.getPath())
