@@ -1,0 +1,3 @@
+Found 2 superperms in 4503962 iterations
+Shortest superperm found: 153
+Number of nodes pruned: 1808199

@@ -25,7 +25,7 @@ def genEdges(N):
     edges = []
     strings = []
     identity = tuple(range(N))
-    for ii in range(1,N):
+    for ii in range(1,N+1):
         for p in permutations(range(0,ii)):
             p = p[::-1]
             # If the start of the perm doesn't match an existing string
@@ -36,14 +36,19 @@ def genEdges(N):
     comb = zip(*sorted(comb, key = lambda el : (-len(el[1]),)+el[1], reverse = True ))
     return comb
 
-def isSuperperm(stage,candidate):
-    """Checks if a superperm candidate does contain all permutations at least once."""
+
+def superpermChecklist(stage,candidate):
     perms = tuple(permutations(range(stage)))
     checklist = dict(zip(perms,tuple(0 for p in perms)))
     for pos in range(len(candidate)-stage+1):
         string = candidate[pos:pos+stage]
         if string in checklist.keys():
             checklist[string] += 1
+    return checklist
+            
+def isSuperperm(stage,candidate):
+    """Checks if a superperm candidate does contain all permutations at least once."""
+    checklist = superpermChecklist(stage,candidate)
     return all([x >= 1 for x in checklist.values()])
 
 def isStrictSuperperm(stage,candidate):
@@ -57,14 +62,8 @@ def isStrictSuperperm(stage,candidate):
             checklist[string] += 1
     return all([x == 1 for x in checklist.values()])
 
-class RowString:
-    def __init__(self):
-        pass
-
-    rowToStr = lambda row : ''.join([str(x) for x in row])
-    rowListToStr = lambda rowList: '\n'.join([rowToStr(x) for x in rowList])
-
-
+def rotate(l, n):
+    return l[n:] + l[:n]
 
 class Method:
     #notation: list of strings of place notation for each row
@@ -77,12 +76,69 @@ class Method:
         self.identity = tuple(range(stage))
         (a,b,c) = genEdges(stage)
         self.edges = a
+        self.edgeStrings = b
         self.edgecost = c
+        
         self.numNodes = factorial(stage)
         
     def nextNode(self, perm, edgei):
         return self.edges[edgei](perm)
 
+    def shortestEdge(self, p1, p2):
+        l=self.stage
+        for ii in range(self.stage):
+            if list(p1[ii:])==list(p2[:-ii]):
+                edge = permPosGen(p1,p2)
+                canon = edge(self.identity)
+                edgeString = list(canon[-ii:])
+                edgecost = len(edgeString)
+                if edgeString in self.edgeStrings:
+                    edgei = self.edgeStrings.index(edgeString)
+                else:
+                    edgei = -1
+                return (edgei,edge,edgeString,edgecost)
+                
+        return -1
+
+    def parse(self, superperm):
+        """superperm - tuple of self.stage distinct objects"""
+        stage = self.stage
+        
+        perm = superperm[0:stage]
+        edgeStrings = []
+        path = []
+        lasti = 0
+        
+        specialedge = False
+        for ii in range(1,len(superperm)-stage+1):
+            cand = superperm[ii:ii+stage]
+            if len(set(cand)) == len(cand):
+                #is a perm
+                
+                edgeCost = ii-lasti
+                edge = permPosGen(perm,cand)
+                canon = edge(self.identity)
+                edgeString = canon[-edgeCost:]
+                edgeStrings.append(edgeString)
+                
+                
+                if edgeString in self.edgeStrings:
+                    path.append(self.edgeStrings.index(edgeString))
+                else:
+                    print(perm)
+                    print(cand)
+                    print(canon)
+                    print(edgeString)
+                    print("cost {}".format(edgeCost))
+                    print("Edge type not indexed")
+                    input()
+                    edgei = -1
+                    specialedge = True
+                perm = cand
+                lasti = ii
+                
+        if not specialedge:
+            return TouchStore(self,path)
 
 
 class TouchStore:

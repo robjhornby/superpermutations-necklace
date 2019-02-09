@@ -31,7 +31,7 @@ k = len(method.edges) # Number of edges/size of dictionary for necklace search
 minlength = 1
 n = factorial(stage)     #length of prenecklaces to generate
 
-a = [0]*(n+1)  #temporary necklace array
+a = [0]*(n)  #temporary necklace array
 prenecklaces = []        #final list of prenecklaces
 necklaces = [] #list of necklaces
 touches = [[]]*(n+1)
@@ -62,6 +62,7 @@ def gen(t, p):
         print("Nodes visited: {}".format(len(touch)))
         print("Pruned: {}".format(pruned))
         print(touch.getPath())
+        print("")
     if(it%6000000==0):
         check = input("Continue? (Y/n): ")
         if check is "n":
@@ -97,18 +98,47 @@ def gen(t, p):
             break
 
 def PrintIt(p, touchlen, touch):
+    global minCost
     if len(touch)+1 == touch.method.numNodes:
-        soln = TouchStore(method,list(a[1:touchlen+1]))
+        # Complete the cycle by finding the final edge
+        print(touch.node,touch.method.identity)
+        (fi,f,fString,fCost) = touch.method.shortestEdge(touch.node,touch.method.identity)
+
+        # Delete the longest node in the cycle, leaving the shortest path
+        if fi >= 0:
+            # final edge is a standard edge
+            costs = touch.pathcost[1:] + [fCost]
+            delInd, delCost = max(tuple(enumerate(costs))[::-1], key=lambda a:a[1])
+            delInd += 1
+            if delInd == touch.method.numNodes-1:
+                newpath = a
+            else:
+                newpath = list(a[:delInd])+[fi]+list(a[delInd+1:])
+
+            soln = TouchStore(method,newpath)
+            minCost = soln.getCost()
+        else:
+            print('Special final edge required: {}'.format(fString))
+            if all(fCost >= x for x in touch.pathcost[1:]):
+                print('Final edge heaviest - ignore')
+            else:
+                print('Final edge provides a better solution, not implemented')
+            soln = TouchStore(method,list(a[1:touchlen+1]))
+            delInd = -1
+            delCost = fCost
+
         print('Success - after {} iterations'.format(it))
         print(soln)
-        print(a[1:touchlen+1])
+        print("Final edge: {}, index {}".format(fString,fi))
+        print("Deleted node: {}, cost {}".format(delInd,delCost))
+        print(soln.getPath())
         print('Superpermutation length {}'.format(touch.getCost()))
         solutions.append(soln)
         solnIters.append(it)
         if not isSuperperm(soln.method.stage,soln.getSuperperm()):
             print('Problem - not a superperm')
 
-
+"""
 print('Starting')
 gen(1,1)       #initial call
 
@@ -118,3 +148,4 @@ print("Number of nodes pruned: {}".format(pruned))
 print("")
 print("Final node: " + "".join([repr(x) for x in touch.getPath()]))
 print(touch.getPath())
+"""
