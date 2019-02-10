@@ -9,7 +9,7 @@ from operator import mul
 from functools import reduce
 from itertools import permutations
 from itertools import cycle
-
+import time
 
 from superpermUtil import *
 from random import *
@@ -19,7 +19,7 @@ import cProfile
 
 solutions = []
 solnIters = []
-stage = 8 # Number of objects
+stage = 6 # Number of objects
 
 method = Method(stage)
 k = len(method.edges) # Number of edges/size of dictionary for necklace search
@@ -40,9 +40,9 @@ falses = 0
 touch = TouchStore(method, list(a))
 abort = False
 
-minCost = 1000000000
-pruned = 0
-
+minCost = 872
+prunedC = 0
+prunedF = 0
 
 def divisors(n):
     div = set()
@@ -53,60 +53,82 @@ def divisors(n):
     div.add(n)
     return div
 
-def pruneCondition(touch, pos,minCost):
-    global pruned
-    if touch.projectedCost(pos) > minCost:
-        pruned += 1
+def pruneCost(touch, pos,minCost):
+    global prunedC
+    projCost = touch.projectedCost()
+    if projCost > minCost:
+        #debprint('Prune projected cost pos: {}, projCost: {}'.format(pos,projCost))
+        prunedC += 1
         return True
-    if not touch.isTrue():
-        pruned += 1
+    if (np.array(touch.getPath()[:-1])>2).sum()>1:
         return True
     return False
 
-itstatus = 10000
+def pruneTruth(touch):
+    global prunedF
+    if not touch.isTrue():
+        #debprint('Prune truth')
+        prunedF += 1
+        return True
+    return False
+    
+itstatus = 50000
 def necklaceSearch(touch):
-    global it, minCost, itstatus
+    global it, minCost, itstatus, starttime,prunedF,prunedC
+    starttime = time.time()
     n = touch.method.numNodes
     k = len(touch.method.edges)-1
+    lastPrunePos = touch.firstFalsePos
     print('Starting necklace search on {} objects, n={}, k={}'.format(touch.method.stage,n,k))
     
     divs = divisors(n)
-    while touch.path != [k]*n:
-        debprint('While -------------------- it {}'.format(it))
-        if touch.firstFalsePos < 0:
+    cond = True
+    while cond:
+        #debprint('-------------------------------------------------------------')
+        #debprint('While -------------------- it {}'.format(it))
+        #if it > 10000:
+        #    break
+        if lastPrunePos < 0:
             start = n
-            debprint('Going from end')
+            #debprint('Going from end {}'.format(start))
         else:
-            start = touch.firstFalsePos
-            debprint('Going from first false')
-            debprint(start)
-        debprint(touch.path)
+            start = lastPrunePos
+            #debprint('Going from last pruned position {}'.format(start))
+        #debprint("path {}".format(touch.getPath()))
+        if touch.path[0] == 1:
+            break
         for pos, el in reversed(tuple(enumerate(touch.path[0:start+1]))):
-            debprint('For -----------')
+            #debprint('For --------pos {}, el {} ---------------------------------'.format(pos,el))
             if el < k:
                 touch.setLastEdge(pos, el + 1)
                 it += 1
                 if it%itstatus == 0:
                     PrintStatus(touch,pos)
                     
-                debprint(touch.getPath())
-                debprint(touch)
-                debprint(pos)
-                debprint(minCost)
-                debprint(pruneCondition(touch,pos,minCost))
-                debprint(touch.isTrue())
-                debprint(touch.firstFalsePos)
-                debprint()
-                if pruneCondition(touch,pos,minCost):
-                    debprint('prune 1')
+                #debprint("Path {}".format(touch.getPath()))
+                #debprint(touch)
+                #debprint("Pos {}, minCost {}, pruneCost {}, truth {}, firstFalse {}".format(
+                #        pos,minCost,pruneCost(touch,pos,minCost),touch.isTrue(),touch.firstFalsePos))
+    
+                if pruneCost(touch,pos,minCost):
+                    """All subsequent edges will also cost too much, step back"""
+                    lastPrunePos = pos-1
+                    #debprint('prune 1 cost')
                     break
-                debprint(n-pos-1)
-                debprint(n)
-                debprint(pos)
+                if pruneTruth(touch):
+                    """Keep trying edges at this position"""
+                    lastPrunePos = touch.firstFalsePos
+                    """Unless it was the last node"""
+                    if el+1 == len(touch.method.edges)-1:
+                        lastPrunePos = touch.firstFalsePos - 1
+                    #debprint('prune 1 truth, lastPrunePos {}'.format(lastPrunePos))
+                    break
+                else:
+                    lastPrunePos = -1
+                #debprint("n {}, n-pos-1 {}, pos {}".format(n,n-pos-1,pos))
                 for i in range(n-pos-1): 
                     # repeat the prenecklace to the end
-                    debprint('D')
-                    debprint(pos+i+1)
+                    #debprint('Inner for loop ---------------------------')
                     
                     touch.setLastEdge(pos+i+1, touch.path[i])
                     it += 1
@@ -114,13 +136,19 @@ def necklaceSearch(touch):
                         PrintStatus(touch,pos)
                     
             
-                    debprint(touch.getPath())
+                    #debprint("Path {}".format(touch.getPath()))
                     isNecklace = (i == n-pos-2) and (pos+1 in divs)
                     if isNecklace and touch.isHamiltonianCycle():
                         PrintIt(touch)
-                    if pruneCondition(touch,pos,minCost):
-                        debprint('prune 2')
+                        lastPrunePos = pos+i
+                        continue
+                    elif pruneTruth(touch):
+                        lastPrunePos = pos+i+1
+                        if el+1 == len(touch.method.edges):
+                            lastPrunePos = pos+1
                         break
+                    else:
+                        lastPrunePos = -1
                     
                     
                 """
@@ -128,38 +156,44 @@ def necklaceSearch(touch):
                 if pos+1 in divs:
                     yield list(t)
                 """
+                #debprint("Breaking main for loop")
                 break
-
+    #debprint("While loop broken")
+    #debprint("Path {}".format(touch.path))
 
 
 
 def PrintStatus(touch,pos):
+    global starttime
     print(" ----- Status ----------------------------------")
-    print("Current node: " + " ".join([repr(x) for x in touch.getPath()]))
+    if touch.method.stage < 7:
+        print("Current node: " + " ".join([repr(x) for x in touch.getPath()]))
+    print("Elapsed time: {}".format(time.time()-starttime))
     print("Iteration {}".format(it))
     print("Number of solutions: {}".format(len(solutions)))
     print("Shortest superperm found: {}".format(minCost))
     print("Current cost: {}".format(touch.getCost()))
-    print("Current projected cost: {}".format(touch.projectedCost(pos)))
+    print("Current projected cost: {}".format(touch.projectedCost()))
     print("Nodes visited: {}".format(len(touch)))
-    print("Pruned: {}".format(pruned))
+    print("Pruned false: {}".format(prunedF))
+    print("Pruned cost: {}".format(prunedC))
 
 def PrintIt(touch):
-    global minCost
+    global minCost, t, starttime
     if touch.isHamiltonianCycle():
         soln = touch.optimumPath()
         cost = soln.getCost()
         if cost < minCost:
             minCost = cost
-        print('Success - at {} iterations'.format(it))
+        print('Success - at {} iterations and {} s'.format(it, time.time()-starttime))
         print('Superpermutation length {}'.format(soln.getCost()))
         print(soln)
         print(soln.getPath())
         solutions.append(soln)
         solnIters.append(it)
         
-        minCost
-        if not isSuperperm(soln.method.stage,soln.getSuperperm()):
+        
+        if not soln.isSuperperm():
             print('Problem - not a superperm')
 
 
@@ -171,12 +205,13 @@ exT = me.parse(ex)
 
 print('Starting')
 
-necklaceSearch(touch)
+#necklaceSearch(touch)
 #cProfile.run('necklaceSearch(touch)','profile')      #initial call
-
+print("------------------------------------------------------")
 print("Found {} superperms in {} iterations".format(len(solutions),it))
-print("Shortest superperm found: {}".format(minCost))
-print("Number of nodes pruned: {}".format(pruned))
+print("Shortest superperm found: {}".format(minCost))    
+print("Pruned false: {}".format(prunedF))
+print("Pruned cost: {}".format(prunedC))
 print("")
 print("Final node: " + "".join([repr(x) for x in touch.getPath()]))
 print(touch.getPath())

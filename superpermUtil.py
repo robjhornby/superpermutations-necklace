@@ -3,12 +3,21 @@
 ##The check for truth doesn't work for methods where the lead end edges
 ##affect more than one row
 
-from xml.dom.minidom import parse
 #import urllib2
 import time
 import copy
 from itertools import *
 from math import factorial
+import numpy as np
+
+debi = 0
+def debprint(text = ''):
+    pass
+    """global debi
+    print(text)
+    debi += 1
+    if debi%10 == 0:
+        input()"""
 
 def permLabelsGen(rowStart, rowEnd):
 	return lambda row : tuple(dict(zip(rowStart, rowEnd))[el] for el in row)
@@ -25,7 +34,7 @@ def genEdges(N):
     edges = []
     strings = []
     identity = tuple(range(N))
-    maxEdgeCost = N-3
+    maxEdgeCost = 3
     maxEdges = 1000
     for ii in range(1,maxEdgeCost+1):
         for p in permutations(range(0,ii)):
@@ -71,14 +80,9 @@ def isStrictSuperperm(stage,candidate):
 def rotate(l, n):
     return l[n:] + l[:n]
 
-debi = 0
-def debprint(text = ''):
-    pass
-    """global debi
-    print(text)
-    debi += 1
-    if debi%10 == 0:
-        input()"""
+
+
+        
 
 class Method:
     #notation: list of strings of place notation for each row
@@ -114,7 +118,14 @@ class Method:
                 return (edgei,edge,edgeString,edgecost)
                 
         return -1
-
+    
+    def permhash(self,perm):
+        h = 0
+        s = self.stage
+        for ii in range(len(perm)):
+            h += s**ii * perm[ii]
+        return h
+    
     def parse(self, superperm):
         """superperm - tuple of self.stage distinct objects"""
         superperm = tuple(superperm)
@@ -152,32 +163,41 @@ class Method:
 
 class TouchStore:
     def __init__(self, method, initpath):
+        l = len(initpath)
         self.method = method
-        self.path = list(initpath)
+        self.path = np.array(initpath,dtype=np.uint16)
         self.node = method.identity
-        self.visited = [self.node]
+        self.visited = np.zeros((l+1,len(self.node)),dtype=np.uint16)
+        self.visited[0] = self.node
+        self.visithash = np.zeros(l+1)
+        self.visithash[0] = method.permhash(self.node)
         self.firstFalsePos = -1
         self.truth = False
-        self.pathcost = []
-        self.length = len(initpath)
+        self.pathcost = np.zeros_like(self.path,dtype=np.uint16)
+        self.length = l
         
         for position,edgei in enumerate(initpath):
             self.node = self.method.nextNode(self.node, edgei)
-            self.visited.append(self.node)
-            self.pathcost.append(self.method.edgecost[edgei])
+            self.visited[position+1] = self.node
+            self.visithash[position+1] = self.method.permhash(self.node)
+            self.pathcost[position] = self.method.edgecost[edgei]
             if self.firstFalsePos == -1:
-                for fs in self.visited[:position]:
-                    if fs == self.node:
+                for fs in self.visithash[:position+1]:
+                    if fs == self.visithash[position+1]:
                         self.truth = False
                         self.firstFalsePos = position
                         break
             
 
-    def projectedCost(self, numEdges):
+    def projectedCost(self):
         """The minimum possible cost of visiting all nodes by repeating the
-        current first numEdges edges"""
+        current edges"""
         #numEdges = self.length
-        return self.getCost()+sum(islice(cycle(self.pathcost[:numEdges+1]),self.length,self.method.numNodes-1))
+        mul = (self.method.numNodes-1) // self.length
+        rem = (self.method.numNodes-1) % self.length
+        #debprint('length: {}, mul: {}, rem: {}, total: {}'.format(self.length,mul,rem,self.length*mul+rem))
+        pathcost = self.getPathcost()
+        return self.method.stage + pathcost.sum()*mul + pathcost[:rem].sum()
 
     def __len__(self):
         return self.length
@@ -187,31 +207,30 @@ class TouchStore:
 
     def setLastEdge(self, position, edgei):
         self.length = position+1
-        debprint('setLastEdge ----')
-        debprint(len(self.path))
-        debprint(len(self.pathcost))
-        debprint(position)
+        ##debprint('setLastEdge ---- pos {}, edge {}, cost {}'.format(position,edgei,self.method.edgecost[edgei]))
         self.path[position] = edgei
-        debprint(self.pathcost[position])
-        debprint(self.method.edgecost[edgei])
         self.pathcost[position] = self.method.edgecost[edgei]
         
         self.node = self.method.nextNode(self.visited[position], edgei)
-        
         self.visited[position+1] = self.node
-
-        
-        self.firstFalsePos = -1
-        self.truth = True
+        self.visithash[position+1] = self.method.permhash(self.node)
+        if self.firstFalsePos == position:
+            self.firstFalsePos = -1
+            self.truth = True
         
         # This assumes the touch has been built up from true substrings!
         if self.length == self.method.numNodes:
-            return 0            
-                    
-        for fs in self.visited[:position+1]:
-            if fs == self.node:
-                debprint('Falseness found')
-                debprint(position)
+            
+            if self.node == self.method.identity:
+                self.truth = True
+            else:
+                self.truth = False
+            
+            self.firstFalsePos = -1
+        
+        for fs in self.visithash[:position+1]:
+            if fs == self.visithash[position+1]:
+                ##debprint('Falseness found at {}'.format(position))
                 self.truth = False
                 self.firstFalsePos = position
                 break
@@ -222,8 +241,8 @@ class TouchStore:
         if not self.isTrue():
             """Doesn't make sense to rotate anything other than a cycle"""
             return
-        delInd, delCost = max(tuple(enumerate(self.pathcost))[::-1], key=lambda a:a[1])
-        newpath = list(self.path[delInd+1:]) + list(self.path[:delInd])
+        delInd = np.argmax(self.pathcost)
+        newpath = np.concatenate((self.path[delInd+1:],self.path[:delInd]))
         return TouchStore(self.method, newpath)
 
     def isHamiltonianCycle(self):
@@ -232,10 +251,10 @@ class TouchStore:
         if not self.node == self.method.identity:
             return False
         for fs in self.visited[1:self.length]:
-            if fs == self.node:
+            if all(fs == self.node):
                 return False
-        debprint('Hamiltonian cycle found ----')
-        debprint(' '.join([str(x) for x in self.getPath()]))
+        #debprint('Hamiltonian cycle found ----')
+        #debprint(' '.join([str(x) for x in self.getPath()]))
         return True
 
     def isSuperperm(self):
@@ -256,11 +275,11 @@ class TouchStore:
         return tuple(out)
     
     def getCost(self):
-        return self.method.stage + sum(self.pathcost[:self.length])
+        return self.method.stage + self.pathcost[:self.length].sum()
     def getPathcost(self):
-        return tuple(self.pathcost[0:self.length+1])
+        return self.pathcost[:self.length]
     def getPath(self):
-        return tuple(self.path[0:self.length])
+        return tuple(self.path[:self.length])
     def isTrue(self):
         if self.length == self.method.numNodes:
             return self.isHamiltonianCycle()
