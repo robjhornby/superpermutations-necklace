@@ -3,14 +3,14 @@
 
 This algorithm can find superpermutations of the following lengths in the following number of iterations of the algorithm:
 
-| Number of objects | Length | Iterations |
-| ----------------- | ------ | ---------- |
-| 3                 | 9      | 7          |
-| 4                 | 33     | 26         |
-| 5                 | 153    | 125        |
+| Number of objects | Length | Iterations | Time /s |
+| ----------------- | ------ | ---------- | --------|
+| 3                 | 9      | 7          | <<1     |
+| 4                 | 33     | 26         | <<1     |
+| 5                 | 153    | 125        | <<1     |
 | 6                 | 873    | 738        |
+| 7                 | 5913   | 5122       |
 
-I've used a recursive algorithm which hits Python's maximum recursion depth before it can find a solution for 7 objects. The next step will be to implement this approach in an iterative algorithm.
 
 ## Approach
 Treat searching for superpermutations as a graph search, as is being done by others. Every node in the graph has the same edges coming into and out of it if you treat them as transformations of the current node rather than ad-hoc links between all of the permutations. Each edge is weighted by the number of additional objects you need to add to the end of the current string to reach the target permutation. e.g. 012 -> 120 has weight 1 because a single character, '0' has been added. 012->210 has weight 2 because '10' is two characters. etc.
@@ -33,7 +33,7 @@ ACDAAB
 
 CDAABA, etc.
 
-This is a [necklace](https://en.wikipedia.org/wiki/Necklace_(combinatorics)), and so I used the necklace generating algorithm described by [Cattell et al](https://www.sciencedirect.com/science/article/pii/S0196677400911088) (can be found on google) to avoid searching for every rotated repetition of the same cycle through the superpermutation graph. This algorithm generates the necklace strings in lexicographic order, meaning it tries the lowest weight edges first.
+This is a [necklace](http://mathworld.wolfram.com/Necklace.html), and so I used the necklace generating algorithm described by [Cattell et al](https://www.sciencedirect.com/science/article/pii/S0196677400911088) (can be found on google) to avoid searching for every rotated repetition of the same cycle through the superpermutation graph. This algorithm generates the necklace strings in lexicographic order, meaning it tries the lowest weight edges first.
 
 ## Pruning
 The search can be pruned at any iteration by checking whether the current path visits any node twice. Each time the search is pruned, the string which has been pruned will never occur in any part of the future search at any position along the path thanks to the necklace generating algorithm, by construction.
@@ -42,10 +42,10 @@ The search can also be pruned by keeping track of the current minimum superpermu
 
 Length of current incomplete superpermutation string + the number of nodes left to visit < minimum superpermutation length
 
-This assumes every remaining node can be visited with a weight 1 edge, which could be improved upon.
+This assumes every remaining node can be visited with a weight 1 edge, which could be improved upon by using the necklace's repeating structure - the shortest possible path to complete the path must be at least as long as the path obtained by following the edges from the start of the current path again at the end of the current path and repeating them. i.e. if you are currently at this string of edges: 00001, and you need 15 edges (say), the best you can do must be worse than 000010000100001 because all paths containing 00000 have already been ruled out by this point in the search. 
 
 
 ## To do:
-* Switch to iterative algorithm to avoid recursion depth limitations
-* Improve pruning conditions to prune branches earlier
-* Try 7 objects
+- [x] Switch to iterative algorithm to avoid recursion depth limitations
+- [x] Try 7 objects
+- [ ] Check new pruning method is doing what I expect
