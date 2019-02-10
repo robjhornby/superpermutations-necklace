@@ -177,7 +177,7 @@ class TouchStore:
         """The minimum possible cost of visiting all nodes by repeating the
         current first numEdges edges"""
         numEdges = self.length
-        return self.pathcost[0]+sum(islice(cycle(self.pathcost[1:numEdges+1]),self.method.numNodes-1))
+        return self.pathcost[0]+sum(islice(cycle(self.pathcost[:numEdges+1]),self.method.numNodes-1))
 
     def __len__(self):
         return self.length

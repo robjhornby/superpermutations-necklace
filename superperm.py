@@ -15,7 +15,7 @@ from superpermUtil import *
 from random import *
 import math
 import time
-
+import cProfile
 
 solutions = []
 solnIters = []
@@ -55,9 +55,9 @@ def divisors(n):
 
 def pruneCondition(touch, pos,minCost):
     global pruned
-    if touch.projectedCost(pos) > minCost:
-        pruned += 1
-        return True
+    #if touch.projectedCost(pos) > minCost:
+    #    pruned += 1
+    #    return True
     if not touch.isTrue():
         pruned += 1
         return True
@@ -73,7 +73,6 @@ def necklaceSearch(touch):
     divs = divisors(n)
     while touch.path != [k]*n:
         debprint('While --------------------')
-        
         if touch.firstFalsePos < 0:
             start = n
             debprint('Going from n')
@@ -112,6 +111,7 @@ def necklaceSearch(touch):
                     it += 1
                     if it%itstatus == 0:
                         PrintStatus(touch,pos)
+                    
             
                     debprint(touch.getPath())
                     isNecklace = (i == n-pos-2) and (pos+1 in divs)
@@ -166,7 +166,8 @@ exT = me.parse(ex)
 
 print('Starting')
 
-necklaceSearch(touch)      #initial call
+necklaceSearch(touch)
+#cProfile.run('necklaceSearch(touch)','profile')      #initial call
 
 print("Found {} superperms in {} iterations".format(len(solutions),it))
 print("Shortest superperm found: {}".format(minCost))
