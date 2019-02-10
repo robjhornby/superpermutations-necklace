@@ -25,7 +25,7 @@ def genEdges(N):
     edges = []
     strings = []
     identity = tuple(range(N))
-    maxEdgeCost = N-1
+    maxEdgeCost = N-3
     maxEdges = 1000
     for ii in range(1,maxEdgeCost+1):
         for p in permutations(range(0,ii)):
@@ -176,8 +176,8 @@ class TouchStore:
     def projectedCost(self, numEdges):
         """The minimum possible cost of visiting all nodes by repeating the
         current first numEdges edges"""
-        numEdges = self.length
-        return self.pathcost[0]+sum(islice(cycle(self.pathcost[:numEdges+1]),self.method.numNodes-1))
+        #numEdges = self.length
+        return self.getCost()+sum(islice(cycle(self.pathcost[:numEdges+1]),self.length,self.method.numNodes-1))
 
     def __len__(self):
         return self.length
@@ -234,8 +234,8 @@ class TouchStore:
         for fs in self.visited[1:self.length]:
             if fs == self.node:
                 return False
-        print('Hamiltonian cycle found ----')
-        print(self.getPath())
+        debprint('Hamiltonian cycle found ----')
+        debprint(' '.join([str(x) for x in self.getPath()]))
         return True
 
     def isSuperperm(self):
@@ -256,7 +256,7 @@ class TouchStore:
         return tuple(out)
     
     def getCost(self):
-        return self.method.stage + sum(self.pathcost)
+        return self.method.stage + sum(self.pathcost[:self.length])
     def getPathcost(self):
         return tuple(self.pathcost[0:self.length+1])
     def getPath(self):

@@ -19,7 +19,7 @@ import cProfile
 
 solutions = []
 solnIters = []
-stage = 6 # Number of objects
+stage = 8 # Number of objects
 
 method = Method(stage)
 k = len(method.edges) # Number of edges/size of dictionary for necklace search
@@ -40,7 +40,7 @@ falses = 0
 touch = TouchStore(method, list(a))
 abort = False
 
-minCost = 875
+minCost = 1000000000
 pruned = 0
 
 
@@ -55,7 +55,7 @@ def divisors(n):
 
 def pruneCondition(touch, pos,minCost):
     global pruned
-    if touch.getCost() > minCost:
+    if touch.projectedCost(pos) > minCost:
         pruned += 1
         return True
     if not touch.isTrue():
@@ -63,7 +63,7 @@ def pruneCondition(touch, pos,minCost):
         return True
     return False
 
-itstatus = 100000
+itstatus = 10000
 def necklaceSearch(touch):
     global it, minCost, itstatus
     n = touch.method.numNodes
@@ -134,27 +134,31 @@ def necklaceSearch(touch):
 
 
 def PrintStatus(touch,pos):
+    print(" ----- Status ----------------------------------")
+    print("Current node: " + " ".join([repr(x) for x in touch.getPath()]))
     print("Iteration {}".format(it))
     print("Number of solutions: {}".format(len(solutions)))
     print("Shortest superperm found: {}".format(minCost))
-    print("Current node: " + " ".join([repr(x) for x in touch.getPath()]))
     print("Current cost: {}".format(touch.getCost()))
     print("Current projected cost: {}".format(touch.projectedCost(pos)))
     print("Nodes visited: {}".format(len(touch)))
     print("Pruned: {}".format(pruned))
-    print(touch.getPath())
 
 def PrintIt(touch):
     global minCost
     if touch.isHamiltonianCycle():
         soln = touch.optimumPath()
-        minCost = touch.getCost()
+        cost = soln.getCost()
+        if cost < minCost:
+            minCost = cost
         print('Success - at {} iterations'.format(it))
         print('Superpermutation length {}'.format(soln.getCost()))
         print(soln)
         print(soln.getPath())
         solutions.append(soln)
         solnIters.append(it)
+        
+        minCost
         if not isSuperperm(soln.method.stage,soln.getSuperperm()):
             print('Problem - not a superperm')
 
