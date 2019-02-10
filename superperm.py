@@ -19,7 +19,7 @@ import cProfile
 
 solutions = []
 solnIters = []
-stage = 5 # Number of objects
+stage = 6 # Number of objects
 
 method = Method(stage)
 k = len(method.edges) # Number of edges/size of dictionary for necklace search
@@ -40,7 +40,7 @@ falses = 0
 touch = TouchStore(method, list(a))
 abort = False
 
-minCost = 873
+minCost = 875
 pruned = 0
 
 
@@ -55,9 +55,9 @@ def divisors(n):
 
 def pruneCondition(touch, pos,minCost):
     global pruned
-    #if touch.projectedCost(pos) > minCost:
-    #    pruned += 1
-    #    return True
+    if touch.getCost() > minCost:
+        pruned += 1
+        return True
     if not touch.isTrue():
         pruned += 1
         return True
@@ -72,13 +72,14 @@ def necklaceSearch(touch):
     
     divs = divisors(n)
     while touch.path != [k]*n:
-        debprint('While --------------------')
+        debprint('While -------------------- it {}'.format(it))
         if touch.firstFalsePos < 0:
             start = n
-            debprint('Going from n')
+            debprint('Going from end')
         else:
             start = touch.firstFalsePos
             debprint('Going from first false')
+            debprint(start)
         debprint(touch.path)
         for pos, el in reversed(tuple(enumerate(touch.path[0:start+1]))):
             debprint('For -----------')
@@ -98,7 +99,7 @@ def necklaceSearch(touch):
                 debprint()
                 if pruneCondition(touch,pos,minCost):
                     debprint('prune 1')
-                    continue
+                    break
                 debprint(n-pos-1)
                 debprint(n)
                 debprint(pos)

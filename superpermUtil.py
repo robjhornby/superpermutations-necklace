@@ -234,8 +234,8 @@ class TouchStore:
         for fs in self.visited[1:self.length]:
             if fs == self.node:
                 return False
-        debprint('Hamiltonian cycle found ----')
-        debprint(self.getPath())
+        print('Hamiltonian cycle found ----')
+        print(self.getPath())
         return True
 
     def isSuperperm(self):
