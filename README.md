@@ -3,13 +3,16 @@
 
 This algorithm can find superpermutations of the following lengths in the following number of iterations of the algorithm:
 
-| Number of objects | Length | Iterations | Time /s |
+| Number of objects | Length | Iterations | Time    |
 | ----------------- | ------ | ---------- | --------|
-| 3                 | 9      | 7          | <<1     |
-| 4                 | 33     | 26         | <<1     |
-| 5                 | 153    | 125        | <<1     |
-| 6                 | 873    | 738        |
-| 7                 | 5913   | 5122       |
+| 3                 | 9      | 7          | <<1 s   |
+| 4                 | 33     | 26         | <<1 s   |
+| 5                 | 153    | 125        | <<1 s   |
+| 6                 | 873    | 738        | 0.07 s  |
+| 7                 | 5913   | 5122       | 2.8 s   |
+| 8                 | 46233  | 40862      | 205 s   |
+
+The number of nodes evaluated per second is increasing as the number of objects increases - need to find the source. May be to do with checking that the path doesn't visit a node twice which could be made quicker.
 
 
 ## Approach
@@ -35,6 +38,8 @@ CDAABA, etc.
 
 This is a [necklace](http://mathworld.wolfram.com/Necklace.html), and so I used the necklace generating algorithm described by [Cattell et al](https://www.sciencedirect.com/science/article/pii/S0196677400911088) (can be found on google) to avoid searching for every rotated repetition of the same cycle through the superpermutation graph. This algorithm generates the necklace strings in lexicographic order, meaning it tries the lowest weight edges first.
 
+Update - after reading some more about superpermutations, it seems like they can also be flipped which makes this representation a bracelet.
+
 ## Pruning
 The search can be pruned at any iteration by checking whether the current path visits any node twice. Each time the search is pruned, the string which has been pruned will never occur in any part of the future search at any position along the path thanks to the necklace generating algorithm, by construction.
 
@@ -49,3 +54,4 @@ This assumes every remaining node can be visited with a weight 1 edge, which cou
 - [x] Switch to iterative algorithm to avoid recursion depth limitations
 - [x] Try 7 objects
 - [ ] Check new pruning method is doing what I expect
+- [ ] Profile code
