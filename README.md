@@ -12,7 +12,7 @@ This algorithm can find superpermutations of the following lengths in the follow
 | 7                 | 5913   | 5122       | 2.8 s   |
 | 8                 | 46233  | 40862      | 205 s   |
 
-The number of nodes evaluated per second is increasing as the number of objects increases - need to find the source. May be to do with checking that the path doesn't visit a node twice which could be made quicker.
+The time taken could be reduced by implementing the algorithm more carefully... At each iteration there is quite a slow check to see if the new node has already been visited which could be sped up.
 
 
 ## Approach
@@ -20,13 +20,13 @@ Treat searching for superpermutations as a graph search, as is being done by oth
 
 After generating all possible edges for a single node in the given graph (which only depends on the number of objects), order these edges from least to most weight, and assign an arbitrary order to edges which share a weight. Label these edges A, B, C, etc. so that finding a superpermutation is equivalent to finding a string consisting of A,B,C... such that the corresponding path through the graph visits every node.
 
-Now make some assumptions which I don't know are true so that this solution can work:
-1. Each node may not be visited twice, i.e. each permutation appears exactly once in the shortest superpermutation
-2. The solution must be a hamiltonian cycle with a single edge removed
+Now make the following assumptions:
+1. Each node may not be visited twice, i.e. each permutation appears exactly once in the shortest superpermutation. I don't know whether this is necessarily true.
+2. The solution must be a Hamiltonian cycle with a single edge removed (it must be a Hamiltonian path, and since the graph is complete, any Hamiltonian path can be turned into a Hamiltonian cycle by adding one edge)
 
-Given that every node is equivalent you could start the path through the graph at any node, following the same Hamiltonian cycle, and still visit every node. Or equivalently, you can take any number of edges from the start of the cycle and stick them on the end of the cycle, start that thing from the same node and still visit every node. 
+Given that every node is equivalent (the graph is vertex transitive) you could start the path through the graph at any node, following the same Hamiltonian cycle, and still visit every node. Or equivalently, you can take any number of edges from the start of the cycle and stick them on the end of the cycle and still have fundamentally the same cycle.
 
-This is equivalent to saying that the string of edges is cyclically invariant, i.e. the following strings are equivalent (if they correspond to a cycle in a graph):
+This is equivalent to saying that the string of edges is invariant under rotation, i.e. the following strings are equivalent (if they correspond to a cycle in a graph):
 
 ABACDA
 
@@ -36,9 +36,9 @@ ACDAAB
 
 CDAABA, etc.
 
-This is a [necklace](http://mathworld.wolfram.com/Necklace.html), and so I used the necklace generating algorithm described by [Cattell et al](https://www.sciencedirect.com/science/article/pii/S0196677400911088) (can be found on google) to avoid searching for every rotated repetition of the same cycle through the superpermutation graph. This algorithm generates the necklace strings in lexicographic order, meaning it tries the lowest weight edges first.
+This is a [necklace](http://mathworld.wolfram.com/Necklace.html), and so I used the necklace generating algorithm described by [Cattell et al](https://www.sciencedirect.com/science/article/pii/S0196677400911088) (can be found on google) to avoid searching for every rotated repetition of the same cycle through the graph of permutations. This algorithm generates the necklace strings in lexicographic order, meaning it tries the lowest weight edges first.
 
-Update - after reading some more about superpermutations, it seems like they can also be flipped which makes this representation a bracelet.
+Update - after reading some more about superpermutations, it seems like they can also be flipped left to right which would make them a bracelet rather than a necklace. There is likely a lot of other symmetry too...
 
 ## Pruning
 The search can be pruned at any iteration by checking whether the current path visits any node twice. Each time the search is pruned, the string which has been pruned will never occur in any part of the future search at any position along the path thanks to the necklace generating algorithm, by construction.
