@@ -31,7 +31,9 @@ a = [0]*(n)  #temporary necklace array
 prenecklaces = []        #final list of prenecklaces
 necklaces = [] #list of necklaces
 touches = [[]]*(n+1)
-stop = False
+stop = Falseor v in g:
+        print 'g.vertices[%s]=%s' %(v.get_id(), g.vertices[v.get_id()])
+
 
 it = 0
 falses = 0

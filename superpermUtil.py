@@ -10,6 +10,17 @@ from itertools import *
 from math import factorial
 import numpy as np
 
+
+
+def divisors(n):
+    div = set()
+    for i in range(1, (int)(n/2+1)):
+        if n % i == 0:
+            div.add(i)
+
+    div.add(n)
+    return div
+
 debi = 0
 def debprint(text = ''):
     pass
@@ -36,6 +47,14 @@ def genEdges(N):
     identity = tuple(range(N))
     maxEdgeCost = 3
     maxEdges = 1000
+def divisors(n):
+    div = set()
+    for i in range(1, (int)(n/2+1)):
+        if n % i == 0:
+            div.add(i)
+
+    div.add(n)
+    return div
     for ii in range(1,maxEdgeCost+1):
         for p in permutations(range(0,ii)):
             p = p[::-1]
