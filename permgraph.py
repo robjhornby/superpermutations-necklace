@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Mon Feb 25 00:01:50 2019
+
+@author: rob
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Sat Feb 23 13:41:30 2019
 
 @author: rob
@@ -11,7 +19,7 @@ from itertools import *
 from math import factorial
 import numpy as np
 from superpermUtil import *
-
+from copy import deepcopy
 permGraph = dict()
 
 # permGraph
@@ -57,6 +65,7 @@ class Vertex:
 
 class PermGraph:
     def __init__(self, N):
+        self.num_objects = N
         self.identity = tuple(range(0,N))
         self.vertices = {}
         self.num_vertices = 0
@@ -119,42 +128,46 @@ class Path:
         
         self.isHamiltonian = False
         
+        self.bestWeight = 10000000
+        
         for ii in range(graph.num_edges):
             if not self.setLast(ii,0):
                 break
         
     def pruneCondition(self):
-        pass
+        if self.bestWeight < self.get_weight():
+            return True
+        
+        return False
     
     def setLast(self, ind, edgeI):
-        curInd = len(self)-1
-        if len(self)<len(self.edgeTrial):
-            self.edgeTrial.pop()
-        
         #Traverse path back to ind, removing edges
-        for ii in range(curInd, ind-1,-1):
-            self.visited.remove(self.visitList.pop())
-            self.edgeList.pop()
-            self.edgeTrial.pop()
+        self.backtrack_to(ind)
         
-        self.update_node()
         nextNode = self.get_edge(edgeI).perm(self.node)
         self.edgeTrial.append(edgeI)
         
         self.isHamiltonian = False
         if nextNode == self.startNode:
             if len(self) == self.graph.num_vertices-1:
-                self.isHamiltonian = True
-                self.visited.add(nextNode)
-                self.visitList.append(nextNode)
+                weight = self.get_weight()
+                if self.bestWeight >= weight:
+                    self.bestWeight = weight
+                    self.isHamiltonian = True
+                    
+                    self.visited.add(nextNode)
+                    self.visitList.append(nextNode)
+                    
+                    self.edgeList.append(edgeI)
+                    self.update_node()
+                else:
+                    return False
                 
-                self.edgeList.append(edgeI)
-                self.update_node()
             else:
                 return False
         
         
-        if nextNode not in self.visited and nextNode != self.startNode:
+        if nextNode not in self.visited and nextNode != self.startNode and not self.pruneCondition():
             self.visited.add(nextNode)
             self.visitList.append(nextNode)
             
@@ -163,8 +176,22 @@ class Path:
             return True
         
         return False
+    
+    def backtrack_to(self,ind):
+        if len(self)<len(self.edgeTrial):
+            self.edgeTrial.pop()
+        for ii in range(len(self)-1, ind-1,-1):
+            self.visited.remove(self.visitList.pop())
+            self.edgeList.pop()
+            self.edgeTrial.pop()
+        
+        self.update_node()
+    
     def get_edge(self,ii):
         return self.graph.edges[ii]
+    
+    def get_weight(self):
+        return self.graph.num_objects + sum([x.weight for x in [self.graph.edges[ii] for ii in self.edgeList]])
     
     def __len__(self):
         return len(self.edgeList)
@@ -191,57 +218,65 @@ class Path:
             out.extend(self.visitList[ii][ind:])
         return tuple(out)
     
+
+class NecklaceSearcher:
+    def __init__(self, graph):
+        self.graph = graph
+        self.dictSize = graph.num_edges
+        self.nLength = graph.num_vertices # = N!
+        self.divs = divisors(self.nLength)
+        self.its = 0
+        self.results = []
+        self.path = Path(self.graph,self.nLength)
         
-def necklaceSearch(graph):
-    dictSize = graph.num_edges
-    nLength = graph.num_vertices # = N!
-    divs = divisors(nLength)
-    path = Path(graph,nLength)
-    
-    while path.edgeList[0] != dictSize-1:
-        #Begin from the end of the current path
-#        print('While')
-#        print(path)
-#        print(path.edgeTrial)
-#        print([x for x in reversed(tuple(enumerate(path.edgeTrial)))])
-#        input()
-        for pos, el in reversed(tuple(enumerate(path.edgeTrial))):
-#            print('For pos el')
-#            print(path)
-##            print(path.edgeTrial)
-##            print(pos,el,len(path))
-#            input()
-            if el < dictSize-1:
-                
-                if not path.setLast(pos, el+1):
-                    if pos+1 in divs and path.is_hamilton():
-                        yield path
-                    break
-                
-                for i in range(nLength-1 - pos): 
-                    # repeat the prenecklace to the end
-#                    print('Repeat to end')
-#                    print(path)
-#                    print(path.edgeTrial)
-#                    print(pos,el,len(path))
-#                    input()
-                    if not path.setLast(pos+1 +i, path.edgeList[i]):
-                        if pos+1 in divs and path.is_hamilton():
-                            yield path
+    def run(self):
+        
+        while self.path.edgeList[0] != self.dictSize-1:
+            for pos, el in reversed(tuple(enumerate(self.path.edgeTrial))):
+                if el < self.dictSize-1:
+                    self.incCounter()
+                    if not self.path.setLast(pos, el+1):
+                        if pos+1 in self.divs and self.path.is_hamilton():
+                            self.save_result()
+                            yield deepcopy(self.results[-1])
                         break
                     
-                # condition for this to be a necklace
-#                if pos+1 in divs and path.isHamiltonian:
-#                    print(path)
-#                    yield path
+                    for i in range(self.nLength-1 - pos):
+                        self.incCounter()
+                        if not self.path.setLast(pos+1 +i, self.path.edgeList[i]):
+                            if pos+1 in self.divs and self.path.is_hamilton():
+                                self.save_result()
+                                yield deepcopy(self.results[-1])
+                            break
+
+                    break
                 
-                break
-            
-            
+    def incCounter(self):
+        self.its += 1
+        if self.its % 10000 == 0:
+            print(repr(self))
+    def save_result(self):
+        res = deepcopy(self.path)
+        res.backtrack_to(self.nLength-1)
+        self.results.append(res)
+    def __repr__(self):
+        return """Iteration {}, solutions found {}, current weight {} 
+    Current path:
+    {}""".format(self.its,len(self.results),self.path.get_weight(),self.path)
+
+def divisors(n):
+    div = set()
+    for i in range(1, (int)(n/2+1)):
+        if n % i == 0:
+            div.add(i)
+
+    div.add(n)
+    return div
+
 
 if __name__ == '__main__':
 
-    g = PermGraph(4)    
+    g = PermGraph(5)    
     
     for v in g:
         for e in g.get_edges():
@@ -251,8 +286,9 @@ if __name__ == '__main__':
             weight = e.get_weight()
             #print('( %s , %s, %s, %d)'  % ( repr(vid), repr(eid), repr(neighbour),weight))
     successes = []
-    for neck in necklaceSearch(g):
+    ns = NecklaceSearcher(g)
+    for neck in ns.run():
         print(neck)
+        print('Weight {}'.format(neck.get_weight()))
         print(len(neck))
         successes.append(neck)
-        print(len(successes))
