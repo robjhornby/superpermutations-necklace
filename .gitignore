@@ -4,6 +4,8 @@
 *.dll
 *.exe
 *.app
+*.prof
+*.lprof
 # Database
 *.db
 *.rdb

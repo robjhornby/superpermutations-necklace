@@ -20,7 +20,7 @@ from math import factorial
 import numpy as np
 from superpermUtil import *
 from copy import deepcopy
-permGraph = dict()
+import time
 
 # permGraph
 # 1234 -> 2341 3412 etc.
@@ -70,7 +70,7 @@ class PermGraph:
         self.vertices = {}
         self.num_vertices = 0
         
-        self.edges = self.genEdges(N, 3) # list of Edge objects
+        self.edges = self.genEdges(N, N-1) # list of Edge objects
         self.num_edges = len(self.edges)
         
         for p in permutations(range(0,N)):
@@ -121,6 +121,7 @@ class Path:
         
         self.edgeList = []
         self.edgeTrial = [] # contains the last failed edge if there is one
+        self.edgeWeights = []
         
         self.graph = graph
         self.startNode = graph.identity
@@ -134,12 +135,29 @@ class Path:
             if not self.setLast(ii,0):
                 break
         
+    def copy_path(self):
+        p = Path(self.graph,self.graph.num_vertices)
+        for ii,edge in enumerate(self.edgeList):
+            p.setLast(ii,edge)
+        return p
+    
     def pruneCondition(self):
-        if self.bestWeight < self.get_weight():
+        if self.bestWeight < self.projected_weight():
             return True
         
         return False
     
+    def projected_weight(self):
+        """The minimum possible cost of visiting all nodes by repeating the
+        current edges"""
+        if len(self) == 0:
+            return self.graph.num_vertices
+        
+        mul = (self.graph.num_vertices-1) // len(self)
+        rem = (self.graph.num_vertices-1) % len(self)
+        return self.graph.num_objects + sum(self.edgeWeights)*mul + sum(self.edgeWeights[:rem])
+    
+    #@profile
     def setLast(self, ind, edgeI):
         #Traverse path back to ind, removing edges
         self.backtrack_to(ind)
@@ -159,6 +177,7 @@ class Path:
                     self.visitList.append(nextNode)
                     
                     self.edgeList.append(edgeI)
+                    self.edgeWeights.append(self.graph.edges[edgeI].weight)
                     self.update_node()
                 else:
                     return False
@@ -172,6 +191,7 @@ class Path:
             self.visitList.append(nextNode)
             
             self.edgeList.append(edgeI)
+            self.edgeWeights.append(self.graph.edges[edgeI].weight)
             self.update_node()
             return True
         
@@ -184,6 +204,7 @@ class Path:
             self.visited.remove(self.visitList.pop())
             self.edgeList.pop()
             self.edgeTrial.pop()
+            self.edgeWeights.pop()
         
         self.update_node()
     
@@ -191,13 +212,13 @@ class Path:
         return self.graph.edges[ii]
     
     def get_weight(self):
-        return self.graph.num_objects + sum([x.weight for x in [self.graph.edges[ii] for ii in self.edgeList]])
+        return self.graph.num_objects + sum(self.edgeWeights)
     
     def __len__(self):
         return len(self.edgeList)
     
     def __repr__(self):
-        return str(self.edgeList)
+        return ' '.join([str(x) for x in self.edgeList])
     
     def update_node(self):
         if len(self) == 0:
@@ -228,17 +249,21 @@ class NecklaceSearcher:
         self.its = 0
         self.results = []
         self.path = Path(self.graph,self.nLength)
+        self.starttime = 0
+        self.dorun = True
         
+    #@profile
     def run(self):
-        
-        while self.path.edgeList[0] != self.dictSize-1:
-            for pos, el in reversed(tuple(enumerate(self.path.edgeTrial))):
+        self.starttime = time.time()
+        while self.path.edgeList[0] != self.dictSize-1 and self.dorun:
+            for pos in range(len(self.path.edgeTrial)-1,0,-1):
+                el = self.path.edgeTrial[pos]
+                self.incCounter()
                 if el < self.dictSize-1:
-                    self.incCounter()
                     if not self.path.setLast(pos, el+1):
                         if pos+1 in self.divs and self.path.is_hamilton():
                             self.save_result()
-                            yield deepcopy(self.results[-1])
+                            yield self.results[-1].copy_path()
                         break
                     
                     for i in range(self.nLength-1 - pos):
@@ -246,23 +271,29 @@ class NecklaceSearcher:
                         if not self.path.setLast(pos+1 +i, self.path.edgeList[i]):
                             if pos+1 in self.divs and self.path.is_hamilton():
                                 self.save_result()
-                                yield deepcopy(self.results[-1])
+                                yield self.results[-1].copy_path()
                             break
 
                     break
                 
     def incCounter(self):
         self.its += 1
-        if self.its % 10000 == 0:
+        if self.its % 500000 == 0:
             print(repr(self))
+            if self.its>50000:
+                pass
+                #self.dorun = False
     def save_result(self):
-        res = deepcopy(self.path)
+        res = self.path.copy_path()
         res.backtrack_to(self.nLength-1)
         self.results.append(res)
+        print("""Result found at iteration {}, weight {}:
+            {}""".format(self.its,res.get_weight(),self))
     def __repr__(self):
-        return """Iteration {}, solutions found {}, current weight {} 
+        return """Iteration {}, solutions found {}, elapsed time {} s, rate {} kNode/s
+    Current weight {}, current projected weight {}, best weight {}, 
     Current path:
-    {}""".format(self.its,len(self.results),self.path.get_weight(),self.path)
+    {}""".format(self.its,len(self.results),time.time()-self.starttime,(self.its/1000/(time.time()-self.starttime)),self.path.get_weight(),self.path.projected_weight(),self.path.bestWeight,self.path)
 
 def divisors(n):
     div = set()
@@ -276,7 +307,7 @@ def divisors(n):
 
 if __name__ == '__main__':
 
-    g = PermGraph(5)    
+    g = PermGraph(6)
     
     for v in g:
         for e in g.get_edges():
@@ -288,7 +319,4 @@ if __name__ == '__main__':
     successes = []
     ns = NecklaceSearcher(g)
     for neck in ns.run():
-        print(neck)
-        print('Weight {}'.format(neck.get_weight()))
-        print(len(neck))
         successes.append(neck)
